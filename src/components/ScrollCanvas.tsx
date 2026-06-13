@@ -8,8 +8,6 @@ export function ScrollCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const framesRef = useRef<HTMLImageElement[]>([]);
-  const totalFrames = 240;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -17,19 +15,16 @@ export function ScrollCanvas() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Preload all frames
+    const totalFrames = 192;
     const images: HTMLImageElement[] = [];
-    let loadedCount = 0;
-
-    // Object to tween for playhead
     const playhead = { frame: 0 };
+    let loadedCount = 0;
+    let isUnmounted = false;
+    let playheadTween: gsap.core.Tween | null = null;
+    let scrollTriggerInstance: ScrollTrigger | null = null;
 
-    // Load first frame instantly to show something right away
-    const firstImg = new Image();
-    firstImg.src = `/video-frames/ezgif-frame-001.jpg`;
-    
     const drawFrame = (img: HTMLImageElement) => {
-      if (!canvas || !ctx) return;
+      if (isUnmounted || !canvas || !ctx) return;
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
       const imgWidth = img.naturalWidth || img.width || 1920;
@@ -55,107 +50,151 @@ export function ScrollCanvas() {
       ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
     };
 
-    firstImg.onload = () => {
-      if (playhead.frame === 0) {
-        drawFrame(firstImg);
+    const initGSAPAnimation = () => {
+      if (isUnmounted) return;
+
+      // Draw first frame immediately once loaded
+      if (images[0]) {
+        drawFrame(images[0]);
+      }
+
+      // Animate custom playhead index with GSAP tween
+      playheadTween = gsap.to(playhead, {
+        frame: totalFrames - 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: 'body',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1, // inertia catch-up
+        },
+        onUpdate: () => {
+          const frameIndex = Math.round(playhead.frame);
+          const img = images[frameIndex];
+          if (img && img.complete) {
+            drawFrame(img);
+          }
+        }
+      });
+
+      scrollTriggerInstance = playheadTween.scrollTrigger || null;
+
+      // Recalculate ScrollTrigger measurements after loading
+      setTimeout(() => {
+        if (!isUnmounted) {
+          ScrollTrigger.refresh();
+        }
+      }, 100);
+    };
+
+    const handleImageLoad = () => {
+      if (isUnmounted) return;
+      loadedCount++;
+      const prog = Math.round((loadedCount / totalFrames) * 100);
+      setLoadingProgress(prog);
+
+      if (loadedCount === totalFrames) {
+        setLoaded(true);
+        initGSAPAnimation();
       }
     };
 
+    const handleImageError = () => {
+      // Even if loading fails for a frame, count it to prevent blocking initialization
+      handleImageLoad();
+    };
+
+    // Preload all WebP frames into memory on mount
+    for (let i = 0; i < totalFrames; i++) {
+      const img = new Image();
+      const idx = String(i).padStart(6, '0');
+      img.src = `/webp_frames/frame_${idx}.webp`;
+      img.onload = handleImageLoad;
+      img.onerror = handleImageError;
+      images.push(img);
+    }
+
     const resizeCanvas = () => {
-      if (!canvas) return;
+      if (!canvas || isUnmounted) return;
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
+      // Draw the current playhead frame
       const currentFrameIndex = Math.round(playhead.frame);
-      const currentImg = images[currentFrameIndex] || firstImg;
-      if (currentImg && (currentImg.complete || currentImg === firstImg)) {
+      const currentImg = images[currentFrameIndex];
+      if (currentImg && currentImg.complete) {
         drawFrame(currentImg);
       }
     };
 
-    resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-
-    const scrollTriggerInstance = ScrollTrigger.create({
-      trigger: 'body',
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 0.2, // fast response scrub
-      onUpdate: (self) => {
-        // Calculate raw frame progress based on scroll position
-        const frameIndex = Math.round(self.progress * (totalFrames - 1));
-        playhead.frame = frameIndex;
-
-        let img = images[frameIndex];
-        if (img && img.complete && img.naturalWidth > 0) {
-          drawFrame(img);
-        } else {
-          // Find closest loaded frame to avoid black flickers
-          let closestImg = null;
-          let minDiff = Infinity;
-          for (let i = 0; i < totalFrames; i++) {
-            const tempImg = images[i];
-            if (tempImg && tempImg.complete && tempImg.naturalWidth > 0) {
-              const diff = Math.abs(i - frameIndex);
-              if (diff < minDiff) {
-                minDiff = diff;
-                closestImg = tempImg;
-              }
-            }
-          }
-          if (closestImg) {
-            drawFrame(closestImg);
-          } else if (firstImg.complete) {
-            drawFrame(firstImg);
-          }
-        }
-      }
-    });
-
-    // Start background preloading
-    for (let i = 1; i <= totalFrames; i++) {
-      const img = new Image();
-      const idx = i.toString().padStart(3, '0');
-      img.src = `/video-frames/ezgif-frame-${idx}.jpg`;
-      img.onload = () => {
-        loadedCount++;
-        const prog = Math.round((loadedCount / totalFrames) * 100);
-        setLoadingProgress(prog);
-        if (loadedCount === totalFrames) {
-          setLoaded(true);
-        }
-
-        // If this loaded frame is the current frame, draw it
-        const currentFrameIndex = Math.round(playhead.frame);
-        if (i - 1 === currentFrameIndex) {
-          drawFrame(img);
-        }
-      };
-      images.push(img);
-    }
-    framesRef.current = images;
+    resizeCanvas(); // initial sizing
 
     return () => {
+      isUnmounted = true;
       window.removeEventListener('resize', resizeCanvas);
-      scrollTriggerInstance.kill();
+      if (playheadTween) {
+        playheadTween.kill();
+      }
+      if (scrollTriggerInstance) {
+        scrollTriggerInstance.kill();
+      }
     };
   }, []);
 
   return (
     <>
-      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
-        <canvas ref={canvasRef} className="w-full h-full object-cover opacity-45 dark:opacity-55 mix-blend-normal" />
+      <div 
+        className="fixed inset-0 w-full h-full z-0 pointer-events-none"
+        style={{ transition: 'none' }}
+      >
+        <canvas 
+          ref={canvasRef} 
+          className="w-full h-full object-cover opacity-45 dark:opacity-55 mix-blend-normal"
+          style={{ transition: 'none', willChange: 'transform' }}
+        />
         {/* Soft vignette/color overlay blending it nicely */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/30 to-background/80 pointer-events-none" />
+        <div 
+          className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/30 to-background/80 pointer-events-none"
+          style={{ transition: 'none' }}
+        />
       </div>
       
-      {/* Subtle bottom-right loader for first visit */}
-      {!loaded && loadingProgress < 95 && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-secondary/10 backdrop-blur-md px-4 py-2 rounded-full border border-secondary/20 transition-opacity duration-500">
-          <div className="w-4.5 h-4.5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <span className="text-xs font-mono font-bold text-foreground">
-            Loading: {loadingProgress}%
-          </span>
+      {/* Premium, neural-themed glassmorphic loader overlay */}
+      {!loaded && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95 backdrop-blur-md transition-opacity duration-700 ease-out">
+          <div className="flex flex-col items-center gap-6 p-8 rounded-2xl liquid-glass max-w-sm w-full mx-4">
+            <div className="relative w-16 h-16 flex items-center justify-center">
+              {/* Outer pulsing ring */}
+              <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" />
+              {/* Inner spinning ring */}
+              <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              {/* Center dot */}
+              <div className="absolute w-3 h-3 bg-primary rounded-full" />
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h3 className="font-display text-lg font-bold tracking-wider text-foreground">
+                INITIALIZING SYSTEM
+              </h3>
+              <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+                Caching Neural Assets
+              </p>
+            </div>
+
+            {/* Progress Bar Container */}
+            <div className="w-full bg-secondary/15 h-1.5 rounded-full overflow-hidden border border-secondary/5">
+              <div 
+                className="bg-primary h-full transition-all duration-100 ease-out shadow-[0_0_8px_rgba(114,191,74,0.6)]"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+
+            <div className="flex justify-between w-full text-[10px] font-mono font-bold text-muted-foreground">
+              <span>SYSTEM ONLINE</span>
+              <span className="text-primary">{loadingProgress}%</span>
+            </div>
+          </div>
         </div>
       )}
     </>

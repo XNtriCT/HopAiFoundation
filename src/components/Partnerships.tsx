@@ -20,7 +20,7 @@ const AREAS = [
 
 export function Partnerships() {
   return (
-    <section id="partnerships" className="py-24 md:py-32 bg-transparent relative overflow-hidden">
+    <section id="partnerships" className="py-24 md:py-32 scroll-mt-24 bg-transparent relative overflow-hidden">
       <div className="absolute right-0 top-1/4 w-1/2 h-1/2 bg-secondary/10 blur-[120px] rounded-full pointer-events-none" />
       
       <div className="max-w-7xl mx-auto px-6 md:px-8 relative z-10">

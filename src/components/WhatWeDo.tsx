@@ -46,7 +46,7 @@ export function WhatWeDo() {
   const sectionRef = useRef<HTMLElement>(null);
   
   return (
-    <section id="what-we-do" ref={sectionRef} className="py-24 md:py-32 bg-transparent relative overflow-hidden">
+    <section id="what-we-do" ref={sectionRef} className="py-24 md:py-32 scroll-mt-24 bg-transparent relative overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary to-transparent opacity-50" />
       
       <div className="max-w-7xl mx-auto px-6 md:px-8">

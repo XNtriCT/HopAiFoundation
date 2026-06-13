@@ -10,6 +10,7 @@ import { WhyWeExist } from './components/WhyWeExist';
 import { WhatWeDo } from './components/WhatWeDo';
 import { About } from './components/About';
 import { Partnerships } from './components/Partnerships';
+import { MeetOurTeam } from './components/MeetOurTeam';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { ScanLine } from './components/ScanLine';
@@ -37,6 +38,7 @@ export default function App() {
          <WhatWeDo />
          <About />
          <Partnerships />
+         <MeetOurTeam />
          <Contact />
       </main>
 

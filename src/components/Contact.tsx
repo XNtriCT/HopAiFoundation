@@ -34,7 +34,7 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="py-24 md:py-32 bg-transparent relative overflow-hidden">
+    <section id="contact" className="py-24 md:py-32 scroll-mt-24 bg-transparent relative overflow-hidden">
         <div className="absolute inset-0 z-0">
             <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80" alt="ambient" className="w-full h-full object-cover opacity-10 blur-sm" />
             <div className="absolute inset-0 bg-background/50" />

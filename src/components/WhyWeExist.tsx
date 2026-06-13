@@ -52,7 +52,7 @@ export function WhyWeExist() {
    }, []);
 
    return (
-      <section id="about" ref={sectionRef} className="py-24 md:py-32 bg-transparent relative overflow-hidden">
+      <section id="why-we-exist" ref={sectionRef} className="py-24 md:py-32 scroll-mt-24 bg-transparent relative overflow-hidden">
          <div className="max-w-7xl mx-auto px-6 md:px-8 relative z-10">
 
             <div className="mb-16 md:w-3/4">
