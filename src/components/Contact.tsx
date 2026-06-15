@@ -20,17 +20,46 @@ type FormValues = z.infer<typeof formSchema>;
 
 export function Contact() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormValues>({
       resolver: zodResolver(formSchema)
   });
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log(data);
-      setSubmitted(true);
-      reset();
-      setTimeout(() => setSubmitted(false), 5000);
+      setSubmitError(null);
+      setSubmitted(false);
+      try {
+          const response = await fetch("https://api.web3forms.com/submit", {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json"
+              },
+              body: JSON.stringify({
+                  access_key: "bb4b3c8f-f983-4864-9bf5-e802cab8a90a",
+                  subject: "New Contact Inquiry - HOP AI Foundation",
+                  name: data.name,
+                  organization: data.organization,
+                  email: data.email,
+                  phone: data.phone,
+                  country: data.country,
+                  topic: data.subject,
+                  message: data.message
+              })
+          });
+
+          const result = await response.json();
+          if (response.ok && result.success) {
+              setSubmitted(true);
+              reset();
+              setTimeout(() => setSubmitted(false), 5000);
+          } else {
+              setSubmitError(result.message || "Something went wrong. Please try again.");
+          }
+      } catch (error) {
+          setSubmitError("Failed to send message. Please check your network connection and try again.");
+          console.error("Web3Forms submission error:", error);
+      }
   };
 
   return (
@@ -193,6 +222,11 @@ export function Contact() {
                     {submitted && (
                        <div className="p-4 bg-primary/10 border border-primary/20 text-primary rounded-lg text-center font-medium">
                           Thank you! Your message has been sent successfully.
+                       </div>
+                    )}
+                    {submitError && (
+                       <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-center font-medium">
+                          {submitError}
                        </div>
                     )}
                 </form>
