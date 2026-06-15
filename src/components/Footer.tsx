@@ -30,7 +30,7 @@ export function Footer({ onOpenModal }: FooterProps) {
                      <h4 className="font-bold text-foreground mb-6 uppercase tracking-wider text-sm">Company</h4>
                      <ul className="flex flex-col gap-4 text-muted-foreground">
                         <li><a href="#home" className="hover:text-primary transition-colors">Home</a></li>
-                        <li><a href="#about" className="hover:text-primary transition-colors">About</a></li>
+                        <li><a href="#about-us" className="hover:text-primary transition-colors">About</a></li>
                         <li><a href="#what-we-do" className="hover:text-primary transition-colors">What We Do</a></li>
                      </ul>
                   </div>

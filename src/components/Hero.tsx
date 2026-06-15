@@ -58,7 +58,7 @@ export function Hero() {
               Explore Our Programs
            </a>
            <a 
-              href="#about"
+              href="#about-us"
               className="liquid-glass px-8 py-4 rounded-full font-medium text-foreground transition-all hover:bg-black/5 flex items-center gap-2 group border border-border"
            >
               Learn About Us
